@@ -41,4 +41,26 @@ def add_entry():
     c = conn.cursor()
     
     # Get the previous balance
-    c.execute('SELECT balance FROM entries ORDER BY id DESC LIMIT 
+    c.execute('SELECT balance FROM entries ORDER BY id DESC LIMIT 1')
+    row = c.fetchone()
+    previous_balance = row[0] if row else 0.0
+
+    # Calculate the new balance
+    if entry_type == 'Earnings':
+        new_balance = previous_balance + amount
+    elif entry_type == 'Expenses':
+        new_balance = previous_balance - amount
+    elif entry_type == 'Savings':
+        new_balance = previous_balance + amount
+    
+    # Insert the new entry
+    c.execute('INSERT INTO entries (date, description, amount, type, balance) VALUES (%s, %s, %s, %s, %s)',
+              (date_time, description, amount, entry_type, new_balance))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'status': 'success', 'new_balance': new_balance})
+
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True)
