@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banking System Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background-color: #004d99;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .navbar h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .sidebar {
+            width: 200px;
+            padding: 20px;
+            background-color: #e6e6e6;
+            border-right: 1px solid #ccc;
+        }
+        .main-content {
+            width: 600px;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        .form-group input, .form-group select, .form-group button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        .form-group input[type="number"]::before {
+            content: "$";
+        }
+        .form-group button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+        .summary {
+            margin-top: 20px;
+            background-color: #f4f4f9;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .summary table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .summary th, .summary td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ccc;
+        }
+        .summary th {
+            background-color: #004d99;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>Banking System Simulator</h1>
+    </div>
+    <div class="container">
+        <div class="sidebar">
+            <!-- Sidebar content can go here if needed -->
+        </div>
+        <div class="main-content">
+            <div class="form-group">
+                <label for="date">Date:</label>
+                <input type="date" id="date"><br>
+            </div>
+            <div class="form-group">
+                <label for="amount">Amount ($):</label>
+                <input type="number" id="amount" step="0.01"><br>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <input type="text" id="description"><br>
+            </div>
+            <div class="form-group">
+                <label for="type">Type:</label>
+                <select id="type">
+                    <option value="Earnings">Earnings</option>
+                    <option value="Expenses">Expenses</option>
+                    <option value="Savings">Savings</option>
+                </select><br>
+            </div>
+            <div class="form-group">
+                <button onclick="addEntry()">Add Entry</button>
+            </div>
+            <div class="summary">
+                <h2>Account Summary</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Amount ($)</th>
+                            <th>Type</th>
+                            <th>Balance ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-body">
+                        <!-- Entries will be dynamically added here -->
+                        {% for entry in entries %}
+                        <tr>
+                            <td>{{ entry[0] }}</td>
+                            <td>{{ entry[1] }}</td>
+                            <td>{{ '%.2f' | format(entry[2]) }}</td>
+                            <td>{{ entry[3] }}</td>
+                            <td>{{ '%.2f' | format(entry[4]) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="result"></div>
+        </div>
+    </div>
+    <script>
+        async function addEntry() {
+            const date = document.getElementById('date').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const description = document.getElementById('description').value;
+            const type = document.getElementById('type').value;
+
+            if (!date || isNaN(amount) || !description || !type) {
+                document.getElementById('result').innerText = 'Please fill in all fields.';
+                return;
+            }
+
+            const response = await fetch('/add_entry', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: date,
+                    amount: amount,
+                    description: description,
+                    type: type,
+                }),
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                document.getElementById('result').innerText = 'Entry added successfully. New Balance: $' + result.new_balance.toFixed(2);
+                updateSummary(date, description, amount, type, result.new_balance);
+            } else {
+                document.getElementById('result').innerText = 'Error adding entry.';
+            }
+
+            // Clear the input fields
+            document.getElementById('date').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('type').value = 'Earnings';
+        }
+
+        function updateSummary(date, description, amount, type, balance) {
+            const summaryBody = document.getElementById('summary-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${date}</td>
+                <td>${description}</td>
+                <td>$${amount.toFixed(2)}</td>
+                <td>${type}</td>
+                <td>$${balance.toFixed(2)}</td>
+            `;
+            summaryBody.appendChild(row);
+        }
+    </script>
+</body>
+</html>
